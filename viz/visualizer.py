@@ -18,7 +18,7 @@ TRAIL_KEEP = 300             # number of trail points to retain
 def display_radius(actual_m):
     """Exaggerate body radii so they're visible at solar-system scale."""
     r = actual_m * SCALE * 1000
-    return max(min(r, 1.0), 0.06)
+    return max(min(r, 1.0), 0.25)
 
 # ── Find the executable ────────────────────────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
