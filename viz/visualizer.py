@@ -11,9 +11,14 @@ from vpython import (canvas, sphere, vector, color, label, rate,
                      button, slider, wtext, scene)
 
 # ── Scale ──────────────────────────────────────────────────────────────────────
-# Orbital radius ~384 Mm; scale so the canvas (~10 units wide) fits comfortably.
-SCALE    = 1.0 / 4e7      # 1 m in sim  →  2.5e-8 display units
-TRAIL_KEEP = 300           # number of trail points to retain
+# 1 AU = 1.496e11 m; scale so Earth's orbit (~10 display units) fits the canvas.
+SCALE      = 1.0 / 1.5e10   # 1 AU ≈ 10 display units
+TRAIL_KEEP = 300             # number of trail points to retain
+
+def display_radius(actual_m):
+    """Exaggerate body radii so they're visible at solar-system scale."""
+    r = actual_m * SCALE * 1000
+    return max(min(r, 1.0), 0.06)
 
 # ── Find the executable ────────────────────────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +53,7 @@ scene.width    = 900
 scene.height   = 600
 scene.background = color.black
 scene.autoscale  = False
-scene.range      = 12           # display units — fits the Moon orbit at SCALE
+scene.range      = 13           # display units — fits Earth's orbit around Sun
 
 # ── Shared body state (updated by reader thread, read by render loop) ──────────
 bodies    = {}    # id (int) → {'sphere': sphere, 'name': str}
@@ -75,13 +80,12 @@ def read_frames():
                 continue
 
             pos = vector(px * SCALE, py * SCALE, pz * SCALE)
-            rad = max(radius * SCALE * 6, 0.15)   # min visible size
 
             with bodies_lock:
                 if body_id not in bodies:
                     sph = sphere(
                         pos=pos,
-                        radius=rad,
+                        radius=display_radius(float(parts[9])),
                         color=vector(r, g, b),
                         make_trail=True,
                         trail_type='points',

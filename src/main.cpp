@@ -10,34 +10,46 @@
 
 // Physics constants (SI units throughout)
 constexpr double G       = 6.674e-11;
+constexpr double M_SUN   = 1.989e30;
 constexpr double M_EARTH = 5.972e24;
 constexpr double M_MOON  = 7.342e22;
-constexpr double R_MOON  = 3.844e8;   // Earth-Moon separation (m)
-constexpr double DT      = 60.0;      // 1 minute per physics step
+constexpr double R_SUN   = 6.957e8;
+constexpr double AU      = 1.496e11;   // Earth-Sun distance (m)
+constexpr double R_MOON  = 3.844e8;    // Earth-Moon distance (m)
+constexpr double DT      = 3600.0;     // 1 hour per physics step
 
-// Emit one CSV frame every N physics steps.
-// 48 steps x 60 s = 2,880 s ≈ 48 simulated minutes per visual frame.
-constexpr int STEPS_PER_FRAME = 48;
+// 24 steps × 3600 s = 1 simulated day per visual frame (~30 days/second at 30 fps).
+constexpr int STEPS_PER_FRAME = 24;
 
 // Shared state for stdin thread
 static PhysicsWorld* g_world      = nullptr;
 static volatile bool g_shouldReset = false;
 
 static void buildWorld(PhysicsWorld& world) {
-    const double M_TOTAL = M_EARTH + M_MOON;
-    const double r_earth = (M_MOON  / M_TOTAL) * R_MOON;
-    const double r_moon  = (M_EARTH / M_TOTAL) * R_MOON;
-    // ω = sqrt(G * M_total / R³) — circular orbit angular velocity
-    const double omega   = std::sqrt(G * M_TOTAL / (R_MOON * R_MOON * R_MOON));
+    // Sun sits at the origin. Its recoil from Earth+Moon is ~0.09 m/s — negligible.
+    world.addBody(std::make_shared<Body>(
+        0, "Sun", M_SUN, R_SUN,
+        Vector3(0, 0, 0), Vector3(0, 0, 0),
+        Color(1.0f, 0.9f, 0.2f)));
+
+    // Earth: circular orbit around Sun at 1 AU.
+    // v_earth = sqrt(G * M_sun / AU)
+    const double v_earth = std::sqrt(G * M_SUN / AU);
+
+    // Moon: orbits Earth while Earth orbits Sun.
+    // v_moon_total = v_earth + v_moon_around_earth
+    // v_moon_around_earth = sqrt(G * M_earth / R_moon)
+    const double v_moon_rel = std::sqrt(G * M_EARTH / R_MOON);
 
     world.addBody(std::make_shared<Body>(
-        0, "Earth", M_EARTH, 6.371e6,
-        Vector3(-r_earth, 0, 0), Vector3(0, -omega * r_earth, 0),
+        1, "Earth", M_EARTH, 6.371e6,
+        Vector3(AU, 0, 0), Vector3(0, v_earth, 0),
         Color(0.2f, 0.5f, 1.0f)));
 
+    // Moon starts slightly further from the Sun than Earth, moving faster.
     world.addBody(std::make_shared<Body>(
-        1, "Moon", M_MOON, 1.737e6,
-        Vector3(r_moon, 0, 0), Vector3(0, omega * r_moon, 0),
+        2, "Moon", M_MOON, 1.737e6,
+        Vector3(AU + R_MOON, 0, 0), Vector3(0, v_earth + v_moon_rel, 0),
         Color(0.8f, 0.8f, 0.8f)));
 }
 
