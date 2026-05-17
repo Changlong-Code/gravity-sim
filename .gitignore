@@ -1,0 +1,6 @@
+gravity_sim.exe
+*.o
+*.obj
+data/
+__pycache__/
+*.pyc
